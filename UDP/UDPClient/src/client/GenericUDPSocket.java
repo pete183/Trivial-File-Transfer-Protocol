@@ -1,9 +1,15 @@
 package client;
 
+import java.net.DatagramPacket;
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * GenericUDPSocket extends Thread
+ */
 public class GenericUDPSocket {
+
 
     public static final int LENGTH = 512;
     public static final String TFTPMODE = "octet";
@@ -65,11 +71,27 @@ public class GenericUDPSocket {
     }
 
     public static byte[] getData(byte[] data){
-        return null;
+        List<Byte> fileNameBytes = new ArrayList<>();
+
+        int i = 4;
+        while(i < 512 && data[i] != 0){
+            fileNameBytes.add(data[i]);
+            i++;
+        }
+
+        byte[] fileNameBytesPrim = new byte[fileNameBytes.size()];
+
+
+        for(int j = 0; j < fileNameBytes.size(); j++){
+            fileNameBytesPrim[j] = fileNameBytes.get(j);
+        }
+        return fileNameBytesPrim;
+
     }
 
+
     public static String getErrorMessage(byte[] data){
-        return getString(data, 4);
+        return getString(data, 3);
     }
 
 
@@ -77,7 +99,7 @@ public class GenericUDPSocket {
         List<Byte> fileNameBytes = new ArrayList<>();
 
         int i = offset;
-        while(data[i] != 0){
+        while(i < 512 && data[i] != 0){
             fileNameBytes.add(data[i]);
             i++;
         }
@@ -126,6 +148,14 @@ public class GenericUDPSocket {
         return buf;
     }
 
+
+    public static byte[] addBlockToBuffer(byte[] buf){
+        buf[2] = 0;
+        buf[3] = 0;
+        return buf;
+    }
+
+
     public static byte[] addBlockToBuffer(byte[] buf, int number){
         return addSecondToBuffer(buf, number);
 
@@ -137,10 +167,14 @@ public class GenericUDPSocket {
 
     public static byte[] addErrorMessageToBuffer(byte[] buf, String string){
         int length = (string.getBytes().length < LENGTH) ? string.getBytes().length : (LENGTH - 5);
-        for(int i = 3; i < length + 3; i++) {
-            buf[i] = string.getBytes()[i - 3];
-        }
+        System.arraycopy(string.getBytes(), 0, buf, 3, length);
         return buf;
     }
 
+    public static DatagramPacket createPacket(byte[] buf, InetAddress address){
+        DatagramPacket packet = new DatagramPacket(buf, LENGTH);
+        packet.setAddress(address);
+        packet.setPort(9000);
+        return packet;
+    }
 }

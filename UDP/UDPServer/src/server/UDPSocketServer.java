@@ -1,6 +1,7 @@
 package server;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -39,6 +40,8 @@ public class UDPSocketServer extends GenericUDPSocket {
 
         byte[] totalByteArray = new byte[LENGTH];
         byte[] recvBuf = new byte[LENGTH];     // a byte array that will store the data received by the client
+        ArrayList<Byte> recieveBuffer = new ArrayList<>();
+        String fileName = "";
 
         try {
             // run forever
@@ -57,17 +60,17 @@ public class UDPSocketServer extends GenericUDPSocket {
                 Opcode option = Opcode.get(getOpcode(packet.getData()));
                 switch(option){
                     case Read:
-                        //Read on client
+                        //Read command from client
 
 
-                        String fileName = getFilename(packet.getData());
+                        String readFileName = getFilename(packet.getData());
 
-                        File file = new File("./"+ fileName);
+                        File file = new File("./"+ readFileName);
 
 
 
                         if(file.exists()){
-                            System.out.println("Reading file: " + fileName);
+                            System.out.println("Reading file: " + readFileName);
                             // Send data
                             totalByteArray = Files.readAllBytes(file.toPath());
 
@@ -103,10 +106,10 @@ public class UDPSocketServer extends GenericUDPSocket {
 
                         } else {
                             // Send error
-                            System.out.println(fileName + " does not exist");
+                            System.out.println(readFileName + " does not exist");
                             byte[] errorSend = addOpToBuffer(Opcode.Error.getValue());
                             errorSend = addErrorToBuffer(errorSend, 40);
-                            errorSend = addErrorMessageToBuffer(errorSend, fileName + " does not exist");
+                            errorSend = addErrorMessageToBuffer(errorSend, readFileName + " does not exist");
 
                             //****************************************
                             // Add source code below to extract the IP address (an InetAddress object) and source port (int) from the received packet
@@ -133,8 +136,69 @@ public class UDPSocketServer extends GenericUDPSocket {
 
                         break;
                     case Write:
-                        //Write on client
-                        System.out.println("write");
+                        //Write command from client
+                        fileName = getFilename(packet.getData());
+                        System.out.println("Writing file: " + fileName);
+
+                        // Send Ack
+
+                        byte[] buf = addOpToBuffer(Opcode.Ack.getValue());
+
+                        buf = addBlockToBuffer(buf, packet.getData());
+
+
+
+                        //****************************************
+                        // Extract the IP address (an InetAddress object) and source port (int) from the received packet
+                        // They will be both used to send back the response (which is now in the buf byte array -- see above)
+                        //****************************************
+                        InetAddress addr = packet.getAddress();
+                        int srcPort = packet.getPort();
+
+                        // set the buf as the data of the packet (let's re-use the same packet object)
+                        packet.setData(buf);
+
+                        // set the IP address and port extracted above as destination IP address and port in the packet to be sent
+                        packet.setAddress(addr);
+                        packet.setPort(srcPort);
+
+                        //*****************************************
+                        // Send the packet (a blocking call)
+                        //*****************************************
+                        socket.send(packet);
+
+
+
+
+                        break;
+                    case Data:
+
+                        for(byte bytes: getData(packet.getData())){
+                            recieveBuffer.add(bytes);
+                        }
+
+                        if(packet.getData()[LENGTH - 1] == 0) {
+                            try (FileOutputStream fos = new FileOutputStream(fileName)) {
+
+                                byte[] fileBytesArray = new byte[recieveBuffer.size()];
+                                for(int i = 0; i < recieveBuffer.size(); i++){
+                                    fileBytesArray[i] = recieveBuffer.get(i);
+                                }
+                                fos.write(fileBytesArray);
+                                System.out.println("File has been saved to client's directory as " + fileName);
+                            }
+                        }
+
+                        buf = addOpToBuffer(Opcode.Ack.getValue());
+
+                        buf = addBlockToBuffer(buf, packet.getData());
+
+                        InetAddress addrData = packet.getAddress();
+                        packet = createPacket(buf, addrData);
+
+                        // Send the datagram packet to the server (this is a blocking call) - we do not care about the data that the packet carries.
+                        // The server will respond to any kind of request (i.e. regardless of the packet payload)
+                        socket.send(packet);
                         break;
                     case Ack:
                         int block = getBlock(packet.getData()) + 1;
@@ -153,8 +217,8 @@ public class UDPSocketServer extends GenericUDPSocket {
                             // Extract the IP address (an InetAddress object) and source port (int) from the received packet
                             // They will be both used to send back the response (which is now in the buf byte array -- see above)
                             //****************************************
-                            InetAddress addr = packet.getAddress();
-                            int srcPort = packet.getPort();
+                            addr = packet.getAddress();
+                            srcPort = packet.getPort();
 
                             // set the buf as the data of the packet (let's re-use the same packet object)
                             packet.setData(send);
@@ -168,6 +232,8 @@ public class UDPSocketServer extends GenericUDPSocket {
                             //*****************************************
                             socket.send(packet);
                         }
+                        break;
+                    case Error:
                         break;
                 }
 

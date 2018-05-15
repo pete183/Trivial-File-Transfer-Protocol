@@ -1,5 +1,7 @@
 package server;
 
+import java.net.DatagramPacket;
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,14 +10,13 @@ import java.util.List;
  */
 public class GenericUDPSocket extends Thread {
 
-    /**
-     * Length Packet is 512
-     */
-    public static final int LENGTH = 512;
 
-    /**
-     * TFTP Mode is octet
-     */
+    public GenericUDPSocket(String name) {
+        super(name);
+    }
+
+
+    public static final int LENGTH = 512;
     public static final String TFTPMODE = "octet";
 
     public enum Opcode{
@@ -53,10 +54,6 @@ public class GenericUDPSocket extends Thread {
 
     }
 
-    public GenericUDPSocket(String name){
-        super(name);
-    }
-
     public static int getOpcode(byte[] data){
         return getConcatNumber(data[0], data[1]);
     }
@@ -79,11 +76,27 @@ public class GenericUDPSocket extends Thread {
     }
 
     public static byte[] getData(byte[] data){
-        return null;
+        List<Byte> fileNameBytes = new ArrayList<>();
+
+        int i = 4;
+        while(i < 512 && data[i] != 0){
+            fileNameBytes.add(data[i]);
+            i++;
+        }
+
+        byte[] fileNameBytesPrim = new byte[fileNameBytes.size()];
+
+
+        for(int j = 0; j < fileNameBytes.size(); j++){
+            fileNameBytesPrim[j] = fileNameBytes.get(j);
+        }
+        return fileNameBytesPrim;
+
     }
 
+
     public static String getErrorMessage(byte[] data){
-        return getString(data, 4);
+        return getString(data, 3);
     }
 
 
@@ -91,7 +104,7 @@ public class GenericUDPSocket extends Thread {
         List<Byte> fileNameBytes = new ArrayList<>();
 
         int i = offset;
-        while(data[i] != 0){
+        while(i < 512 && data[i] != 0){
             fileNameBytes.add(data[i]);
             i++;
         }
@@ -133,18 +146,20 @@ public class GenericUDPSocket extends Thread {
         return buf;
     }
 
-    public static byte[] addBlockToBuffer(byte[] buf){
-        buf[2] = 0;
-        buf[3] = 0;
-        return buf;
-    }
-
     public static byte[] addSecondToBuffer(byte[] buf, int number){
 
         buf[2] = (byte) (((10 % number) == 0 ) ? 1 : 0);
         buf[3] = (byte) (number % 10) ;
         return buf;
     }
+
+
+    public static byte[] addBlockToBuffer(byte[] buf){
+        buf[2] = 0;
+        buf[3] = 0;
+        return buf;
+    }
+
 
     public static byte[] addBlockToBuffer(byte[] buf, int number){
         return addSecondToBuffer(buf, number);
@@ -157,12 +172,14 @@ public class GenericUDPSocket extends Thread {
 
     public static byte[] addErrorMessageToBuffer(byte[] buf, String string){
         int length = (string.getBytes().length < LENGTH) ? string.getBytes().length : (LENGTH - 5);
-        for(int i = 3; i < length + 3; i++) {
-            buf[i] = string.getBytes()[i - 3];
-        }
+        System.arraycopy(string.getBytes(), 0, buf, 3, length);
         return buf;
     }
 
-
-
+    public static DatagramPacket createPacket(byte[] buf, InetAddress address){
+        DatagramPacket packet = new DatagramPacket(buf, LENGTH);
+        packet.setAddress(address);
+        packet.setPort(9000);
+        return packet;
+    }
 }
