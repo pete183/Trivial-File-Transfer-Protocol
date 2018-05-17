@@ -3,18 +3,41 @@ package server;
 import java.util.ArrayList;
 import java.util.Random;
 
+/**
+ * SocketConstants
+ * Extends Thread
+ */
 public class SocketConstants extends Thread{
 
+    /**
+     * Protected final Mode set to "octet"
+     * Protected final data length set to 512
+     * Protected final packet length set to 516 e.g. 512 + 4
+     */
     protected final String MODE = "octet";
     protected final int DATA_LENGTH = 512;
+    protected final int PACKET_LENGTH = 516;
 
+
+    /**
+     * SocketConstants
+     * Constructor which implements Thread
+     * @param name
+     */
     public SocketConstants(String name){
         super(name);
     }
 
+    /**
+     * SocketConstants
+     * Non threaded Constructor
+     */
     public SocketConstants(){
     }
 
+    /**
+     * Opcode enum
+     */
     protected enum Opcode{
         Read(1),
         Write(2),
@@ -63,6 +86,13 @@ public class SocketConstants extends Thread{
         return buffer;
     }
 
+    /**
+     * generateTID
+     * Parameter port is included so the server / client
+     * does not have the same port
+     * @param port
+     * @return int
+     */
     protected int generateTID(int port){
         int random;
         do {
@@ -73,6 +103,16 @@ public class SocketConstants extends Thread{
         }
         while(random == port);
         return random;
+    }
 
+    /**
+     * generateTID
+     * @return int
+     */
+    protected int generateTID(){
+        Random r = new Random();
+        int Low = 1025;
+        int High = 65534;
+        return r.nextInt(High-Low) + Low;
     }
 }

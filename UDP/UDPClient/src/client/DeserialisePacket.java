@@ -6,13 +6,11 @@ import java.util.ArrayList;
 
 public class DeserialisePacket extends SocketConstants {
 
-
     private DatagramPacket packet;
 
     public DeserialisePacket(DatagramPacket packet){
         this.packet = packet;
     }
-
 
     /**
      * getOpcode
@@ -64,7 +62,6 @@ public class DeserialisePacket extends SocketConstants {
         int i = 4;
         ArrayList<Byte> buffer = new ArrayList<>();
         while(i < packet.getData().length && packet.getData()[i] != 0){
-            byte sadf = packet.getData()[i];
             buffer.add(packet.getData()[i]);
             i++;
         }
@@ -104,6 +101,7 @@ public class DeserialisePacket extends SocketConstants {
         return new String(convertToBytes(buffer));
 
     }
+
 
 
 

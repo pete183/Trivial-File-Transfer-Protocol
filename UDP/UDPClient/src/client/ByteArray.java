@@ -5,7 +5,6 @@ import java.util.ArrayList;
 
 public class ByteArray extends ArrayList<Byte> {
 
-
     protected void addInt(int number){
         BigInteger bigInt = BigInteger.valueOf(number);
         byte[] buffer = new byte[2];

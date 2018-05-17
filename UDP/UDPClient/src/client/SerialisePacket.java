@@ -3,7 +3,6 @@ package client;
 
 public class SerialisePacket extends SocketConstants {
 
-
     public byte[] getRequestBuffer(Opcode opcode, String fileName){
         return convertToBytes(new ByteArray(){{
             addInt(opcode.getValue());
@@ -29,14 +28,12 @@ public class SerialisePacket extends SocketConstants {
         }});
     }
 
-    public byte[] getErrorBuffer(){
-        return convertToBytes(new ByteArray(){{
+    public byte[] getErrorBuffer() {
+        return convertToBytes(new ByteArray() {{
             addInt(Opcode.Error.getValue());
             addInt(1);
             addString("File not found");
             addZero();
         }});
     }
-
-
 }

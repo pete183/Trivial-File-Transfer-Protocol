@@ -3,10 +3,18 @@ package client;
 import java.util.ArrayList;
 import java.util.Random;
 
-public class SocketConstants {
+public class SocketConstants extends Thread{
 
     protected final String MODE = "octet";
     protected final int DATA_LENGTH = 512;
+    protected final int PACKET_LENGTH = 516;
+
+    public SocketConstants(String name){
+        super(name);
+    }
+
+    public SocketConstants(){
+    }
 
     protected enum Opcode{
         Read(1),
@@ -35,7 +43,6 @@ public class SocketConstants {
             return option;
         }
 
-
         @Override
         public String toString() {
             return String.valueOf(this.getValue());
@@ -55,6 +62,18 @@ public class SocketConstants {
             buffer[i] = bytes.get(i);
         }
         return buffer;
+    }
+
+    protected int generateTID(int port){
+        int random;
+        do {
+            Random r = new Random();
+            int Low = 1025;
+            int High = 65534;
+            random =  r.nextInt(High-Low) + Low;
+        }
+        while(random == port);
+        return random;
     }
 
     protected int generateTID(){

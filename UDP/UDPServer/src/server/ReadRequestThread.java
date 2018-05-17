@@ -9,14 +9,28 @@ import java.net.SocketException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 
+/**
+ * ReadRequestThread
+ * Extends RequestThread
+ */
 public class ReadRequestThread extends RequestThread {
 
-
+    /**
+     * ReadRequestThread
+     * Constructor
+     * @param name
+     * @param tid
+     * @param packet
+     * @throws SocketException
+     */
     public ReadRequestThread(String name, int tid, DatagramPacket packet) throws SocketException {
         super(name, tid, packet);
     }
 
-
+    /**
+     * run
+     * Runs overridden thread method
+     */
     @Override
     public void run() {
         boolean live = true;
@@ -41,19 +55,14 @@ public class ReadRequestThread extends RequestThread {
 
 
                 byte[] sendFileData = serialisePacket.getDataBuffer(0, dataSend);
-                packet.setData(sendFileData);
-                packet.setAddress(packet.getAddress());
-                packet.setPort(packet.getPort());
-                socket.send(packet);
+                socket.send(setPacket(sendFileData, packet));
 
             } else {
                 System.out.println(readFileName + " doesn't exist");
 
                 byte[] sendFileData = serialisePacket.getErrorBuffer();
-                packet.setData(sendFileData);
-                packet.setAddress(packet.getAddress());
-                packet.setPort(packet.getPort());
-                socket.send(packet);
+                socket.send(setPacket(sendFileData, packet));
+
             }
 
 
@@ -64,16 +73,13 @@ public class ReadRequestThread extends RequestThread {
                         int block = deserialisePacket.getBlockNumber();
                         int length = (wholeFile.size() - (block*DATA_LENGTH) < DATA_LENGTH) ? wholeFile.size() - (block * DATA_LENGTH) : (DATA_LENGTH);
                         if(length > 0){
-                            byte[] smallFileData = new byte[512];
+                            byte[] smallFileData = new byte[DATA_LENGTH];
 
                             System.arraycopy(convertToBytes(wholeFile), block * DATA_LENGTH, smallFileData, 0, length);
                             byte[] sendFileData = serialisePacket.getDataBuffer(block, smallFileData);
 
+                            socket.send(setPacket(sendFileData, packet));
 
-                            packet.setData(sendFileData);
-                            packet.setAddress(packet.getAddress());
-                            packet.setPort(packet.getPort());
-                            socket.send(packet);
 
                         } else {
                             live = false;

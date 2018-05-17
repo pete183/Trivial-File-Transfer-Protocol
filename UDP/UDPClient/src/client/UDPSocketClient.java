@@ -15,36 +15,7 @@ public class UDPSocketClient extends SocketConstants {
     private final int TID;
     private InetAddress address;
 
-    private enum ClientOption {
-        Read("1"),
-        Write("2"),
-        Error("3");
 
-        private String value;
-
-        ClientOption(final String value) {
-            this.value = value;
-        }
-
-        public String getValue() {
-            return value;
-        }
-
-        public static ClientOption get(String value){
-            for(ClientOption code: ClientOption.values()){
-                if(code.value.equals(value)){
-                    return code;
-                }
-            }
-            return ClientOption.Error;
-        }
-
-
-        @Override
-        public String toString() {
-            return this.getValue();
-        }
-    }
 
 
     public UDPSocketClient(String[] args) throws IOException {
@@ -52,7 +23,7 @@ public class UDPSocketClient extends SocketConstants {
         //TODO Add timeout for all sockets
 
         TID = generateTID();
-        System.out.println(TID);
+
         DatagramSocket socket;
         DatagramPacket packet;
 
@@ -64,6 +35,7 @@ public class UDPSocketClient extends SocketConstants {
 
 
         socket = new DatagramSocket(TID);
+        socket.setSoTimeout(5000);
         address = InetAddress.getByName(args[0]);
 
         if (args.length != 1) {
@@ -159,6 +131,7 @@ public class UDPSocketClient extends SocketConstants {
                         int length = (wholeFile.size() - ((blockNumber - 1) * DATA_LENGTH) < DATA_LENGTH) ? wholeFile.size() - ((blockNumber - 1) * DATA_LENGTH) : (DATA_LENGTH);
                         if(length < 512){
                             packetLoop = false;
+                            System.out.println("File has been saved to server's directory as " + fileName);
                         }
                         byte[] dataSend = new byte[DATA_LENGTH];
                         System.arraycopy(convertToBytes(wholeFile), (blockNumber - 1) * DATA_LENGTH, dataSend, 0, length);

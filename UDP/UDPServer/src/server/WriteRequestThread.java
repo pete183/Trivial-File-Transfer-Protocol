@@ -5,13 +5,29 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.SocketException;
 
+/**
+ * ReadRequestThread
+ * Extends RequestThread
+ */
 public class WriteRequestThread extends RequestThread {
 
+    /**
+     * WriteRequestThread
+     * Constructor
+     * @param name
+     * @param tid
+     * @param packet
+     * @throws SocketException
+     */
     public WriteRequestThread(String name, int tid, DatagramPacket packet) throws SocketException {
         super(name, tid, packet);
 
     }
 
+    /**
+     * run
+     * Runs overridden thread method
+     */
     @Override
     public void run() {
         boolean live = true;
@@ -24,12 +40,9 @@ public class WriteRequestThread extends RequestThread {
 
             writeFileName = deserialisePacket.getFileName();
             byte[] sendFileData = serialisePacket.getAckBuffer(1);
-            byte[] senderBuffer = new byte[516];
+            byte[] senderBuffer = new byte[PACKET_LENGTH];
             System.arraycopy(sendFileData, 0, senderBuffer, 0, sendFileData.length);
-            packet.setData(senderBuffer);
-            packet.setAddress(packet.getAddress());
-            packet.setPort(packet.getPort());
-            socket.send(packet);
+            socket.send(setPacket(senderBuffer, packet));
 
 
             while (live) {
@@ -55,12 +68,9 @@ public class WriteRequestThread extends RequestThread {
                         } else {
                             byte[] sendBuffer = serialisePacket.getAckBuffer(deserialisePacket.getBlockNumber());
 
-                            senderBuffer = new byte[516];
+                            senderBuffer = new byte[PACKET_LENGTH];
                             System.arraycopy(sendBuffer, 0, senderBuffer, 0, sendBuffer.length);
-                            packet.setData(senderBuffer);
-                            packet.setAddress(packet.getAddress());
-                            packet.setPort(packet.getPort());
-                            socket.send(packet);
+                            socket.send(setPacket(senderBuffer, packet));
                         }
                         break;
                 }
