@@ -144,7 +144,7 @@ public class UDPSocketClient extends SocketConstants {
                     socket.send(packet);
                     break;
                 case Ack:
-                    System.out.println("Ack");
+
 
                     int blockNumber = deserialisePacket.getBlockNumber();
                     File file = new File("./"+ fileName);
@@ -153,14 +153,15 @@ public class UDPSocketClient extends SocketConstants {
                         wholeFile = new ByteArray();
                         wholeFile.addBytes(Files.readAllBytes(file.toPath()));
 
-                        int fileSendLength = (wholeFile.size() < DATA_LENGTH ) ? wholeFile.size() : (DATA_LENGTH);
+                        int length = (wholeFile.size() - ((blockNumber-1)*DATA_LENGTH) < DATA_LENGTH) ? wholeFile.size() - ((blockNumber-1) * DATA_LENGTH) : (DATA_LENGTH);
 
-                        byte[] dataSend = new byte[fileSendLength];
-                        System.arraycopy(convertToBytes(wholeFile), 0, dataSend, 0, fileSendLength);
+
+                        byte[] dataSend = new byte[DATA_LENGTH];
+                        System.arraycopy(convertToBytes(wholeFile), (blockNumber-1) * DATA_LENGTH, dataSend, 0, length);
+
 
 
                         sendFileData = serialisePacket.getDataBuffer(blockNumber+1, dataSend);
-                        System.out.println(new String(sendFileData));
                         packet.setData(sendFileData);
                         packet.setAddress(packet.getAddress());
                         packet.setPort(packet.getPort());

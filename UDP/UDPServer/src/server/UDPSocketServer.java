@@ -121,7 +121,6 @@ public class UDPSocketServer extends SocketConstants {
 
                         recieveBuffer.addBytes(deserialisePacket.getData());
 
-
                         if (packet.getData()[packet.getData().length - 1] == 0) {
                             try (FileOutputStream fos = new FileOutputStream(writeFileName)) {
 
@@ -132,20 +131,23 @@ public class UDPSocketServer extends SocketConstants {
                                 fos.write(fileBytesArray);
                                 fos.close();
                                 System.out.println("File has been saved to server's directory as " + writeFileName);
+
                             }
+                        } else {
+                            byte[] sendBuffer = serialisePacket.getAckBuffer(deserialisePacket.getBlockNumber());
+
+                            senderBuffer = new byte[516];
+                            System.arraycopy(sendBuffer, 0, senderBuffer, 0, sendBuffer.length);
+                            packet.setData(senderBuffer);
+                            packet.setAddress(packet.getAddress());
+                            packet.setPort(packet.getPort());
+                            socket.send(packet);
                         }
 
-                        byte[] sendBuffer = serialisePacket.getAckBuffer(deserialisePacket.getBlockNumber());
 
-                        senderBuffer = new byte[516];
-                        System.arraycopy(sendBuffer, 0, senderBuffer, 0, sendBuffer.length);
-                        packet.setData(senderBuffer);
-                        packet.setAddress(packet.getAddress());
-                        packet.setPort(packet.getPort());
-                        socket.send(packet);
                         break;
                     case Ack:
-                        int block = deserialisePacket.getBlockNumber() + 1;
+                        int block = deserialisePacket.getBlockNumber();
                         int length = (wholeFile.size() - (block*DATA_LENGTH) < DATA_LENGTH) ? wholeFile.size() - (block * DATA_LENGTH) : (DATA_LENGTH);
 
                         if(length > 0){
