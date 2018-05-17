@@ -13,7 +13,6 @@ public class SocketConstants extends Thread{
     }
 
     public SocketConstants(){
-
     }
 
     protected enum Opcode{
@@ -42,7 +41,6 @@ public class SocketConstants extends Thread{
             }
             return option;
         }
-
 
         @Override
         public String toString() {

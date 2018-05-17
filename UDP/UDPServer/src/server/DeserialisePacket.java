@@ -6,7 +6,6 @@ import java.util.ArrayList;
 
 public class DeserialisePacket extends SocketConstants {
 
-
     private DatagramPacket packet;
 
     public DeserialisePacket(DatagramPacket packet){

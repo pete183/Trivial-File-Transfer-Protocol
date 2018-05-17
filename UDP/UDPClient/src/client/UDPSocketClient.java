@@ -48,6 +48,9 @@ public class UDPSocketClient extends SocketConstants {
 
 
     public UDPSocketClient(String[] args) throws IOException {
+
+        //TODO Add timeout for all sockets
+
         TID = generateTID();
         System.out.println(TID);
         DatagramSocket socket;
@@ -149,41 +152,40 @@ public class UDPSocketClient extends SocketConstants {
                     int blockNumber = deserialisePacket.getBlockNumber();
                     File file = new File("./"+ fileName);
 
-                    if(file.exists()){
+                    if(file.exists()) {
                         wholeFile = new ByteArray();
                         wholeFile.addBytes(Files.readAllBytes(file.toPath()));
 
-                        int length = (wholeFile.size() - ((blockNumber-1)*DATA_LENGTH) < DATA_LENGTH) ? wholeFile.size() - ((blockNumber-1) * DATA_LENGTH) : (DATA_LENGTH);
-
-
+                        int length = (wholeFile.size() - ((blockNumber - 1) * DATA_LENGTH) < DATA_LENGTH) ? wholeFile.size() - ((blockNumber - 1) * DATA_LENGTH) : (DATA_LENGTH);
+                        if(length < 512){
+                            packetLoop = false;
+                        }
                         byte[] dataSend = new byte[DATA_LENGTH];
-                        System.arraycopy(convertToBytes(wholeFile), (blockNumber-1) * DATA_LENGTH, dataSend, 0, length);
+                        System.arraycopy(convertToBytes(wholeFile), (blockNumber - 1) * DATA_LENGTH, dataSend, 0, length);
 
 
-
-                        sendFileData = serialisePacket.getDataBuffer(blockNumber+1, dataSend);
+                        sendFileData = serialisePacket.getDataBuffer(blockNumber + 1, dataSend);
                         packet.setData(sendFileData);
                         packet.setAddress(packet.getAddress());
                         packet.setPort(packet.getPort());
                         socket.send(packet);
-
-
-
-
-                    } else {
-                        // Send error
-                        System.out.println(fileName + " doesn't exist");
-
-                        sendFileData = serialisePacket.getErrorBuffer();
-
-
-                        packet.setData(sendFileData);
-                        packet.setAddress(packet.getAddress());
-                        packet.setPort(packet.getPort());
-                        socket.send(packet);
-
-
                     }
+
+//                    } else {
+//                        // Send error
+//                        System.out.println(fileName + " doesn't exist");
+//
+//                        sendFileData = serialisePacket.getErrorBuffer();
+//
+//
+//                        packet.setData(sendFileData);
+//                        packet.setAddress(packet.getAddress());
+//                        packet.setPort(packet.getPort());
+//                        socket.send(packet);
+//                        socket.close();
+//
+//
+//                    }
 
                     break;
                 case Error:
