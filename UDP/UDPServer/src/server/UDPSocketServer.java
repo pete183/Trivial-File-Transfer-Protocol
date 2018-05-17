@@ -8,13 +8,11 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
 
-public class UDPSocketServer extends GenericUDPSocket {
+public class UDPSocketServer extends SocketConstants {
 
     protected DatagramSocket socket = null;
+
 
     public UDPSocketServer() throws SocketException {
         this("UDPSocketServer");
@@ -38,213 +36,146 @@ public class UDPSocketServer extends GenericUDPSocket {
     @Override
     public void run() {
 
-        byte[] totalByteArray = new byte[LENGTH];
-        byte[] recvBuf = new byte[LENGTH];     // a byte array that will store the data received by the client
-        ArrayList<Byte> recieveBuffer = new ArrayList<>();
-        String fileName = "";
+        byte[] recvBuf = new byte[516];     // a byte array that will store the data received by the client
+        byte[] sendFileData = new byte[516];
+        ByteArray wholeFile = new ByteArray();
+        String readFileName = "";
+        String writeFileName = "";
+        ByteArray recieveBuffer = new ByteArray();
+
+
 
         try {
+            DatagramPacket packet = new DatagramPacket(recvBuf, recvBuf.length);
+
+            DatagramSocket threadSocket = new DatagramSocket(generateTID(packet.getPort()));
+
             // run forever
             while (true) {
-                //**************************************
-                // Add source code below to: 
-                // 1) create a DatagramPacket called packet. Use the byte array above to construct the datagram
-                // 2) wait until a client sends something (a blocking call).
-                //**************************************
-
-                DatagramPacket packet = new DatagramPacket(recvBuf, LENGTH);
 
                 socket.receive(packet);
 
+                DeserialisePacket deserialisePacket = new DeserialisePacket(packet);
+                int opcode = deserialisePacket.getOpcode();
 
-                Opcode option = Opcode.get(getOpcode(packet.getData()));
-                switch(option){
+                SerialisePacket serialisePacket = new SerialisePacket();
+                switch(Opcode.get(opcode)){
                     case Read:
-                        //Read command from client
 
+                        readFileName = deserialisePacket.getFileName();
 
-                        String readFileName = getFilename(packet.getData());
 
                         File file = new File("./"+ readFileName);
 
-
-
                         if(file.exists()){
-                            System.out.println("Reading file: " + readFileName);
-                            // Send data
-                            totalByteArray = Files.readAllBytes(file.toPath());
+                            wholeFile = new ByteArray();
+                            wholeFile.addBytes(Files.readAllBytes(file.toPath()));
+
+                            int fileSendLength = (wholeFile.size() < DATA_LENGTH ) ? wholeFile.size() : (DATA_LENGTH);
+
+                            byte[] dataSend = new byte[fileSendLength];
+                            System.arraycopy(convertToBytes(wholeFile), 0, dataSend, 0, fileSendLength);
 
 
-                            byte[] send = addOpToBuffer(Opcode.Data.getValue());
-                            send = addBlockToBuffer(send);
-
-                            int length = (totalByteArray.length < (LENGTH - 4)) ? totalByteArray.length : (LENGTH - 4);
-
-                            System.arraycopy(totalByteArray, 0, send, 4, length);
-
-
-                            //****************************************
-                            // Extract the IP address (an InetAddress object) and source port (int) from the received packet
-                            // They will be both used to send back the response (which is now in the buf byte array -- see above)
-                            //****************************************
-                            InetAddress addr = packet.getAddress();
-                            int srcPort = packet.getPort();
-
-                            // set the buf as the data of the packet (let's re-use the same packet object)
-                            packet.setData(send);
-
-                            // set the IP address and port extracted above as destination IP address and port in the packet to be sent
-                            packet.setAddress(addr);
-                            packet.setPort(srcPort);
-
-                            //*****************************************
-                            // Send the packet (a blocking call)
-                            //*****************************************
+                            sendFileData = serialisePacket.getDataBuffer(0, dataSend);
+                            packet.setData(sendFileData);
+                            packet.setAddress(packet.getAddress());
+                            packet.setPort(packet.getPort());
                             socket.send(packet);
+
 
 
 
                         } else {
                             // Send error
-                            System.out.println(readFileName + " does not exist");
-                            byte[] errorSend = addOpToBuffer(Opcode.Error.getValue());
-                            errorSend = addErrorToBuffer(errorSend, 40);
-                            errorSend = addErrorMessageToBuffer(errorSend, readFileName + " does not exist");
+                            System.out.println(readFileName + " doesn't exist");
 
-                            //****************************************
-                            // Add source code below to extract the IP address (an InetAddress object) and source port (int) from the received packet
-                            // They will be both used to send back the response (which is now in the buf byte array -- see above)
-                            //****************************************
-                            InetAddress addr = packet.getAddress();
-                            int srcPort = packet.getPort();
+                            sendFileData = serialisePacket.getErrorBuffer();
 
-                            // set the buf as the data of the packet (let's re-use the same packet object)
-                            packet.setData(errorSend);
 
-                            // set the IP address and port extracted above as destination IP address and port in the packet to be sent
-                            packet.setAddress(addr);
-                            packet.setPort(srcPort);
-
-                            //*****************************************
-                            // Send the packet (a blocking call)
-                            //*****************************************
+                            packet.setData(sendFileData);
+                            packet.setAddress(packet.getAddress());
+                            packet.setPort(packet.getPort());
                             socket.send(packet);
+
 
                         }
 
-
-
                         break;
                     case Write:
-                        //Write command from client
-                        fileName = getFilename(packet.getData());
-                        System.out.println("Writing file: " + fileName);
-
-                        // Send Ack
-
-                        byte[] buf = addOpToBuffer(Opcode.Ack.getValue());
-
-                        buf = addBlockToBuffer(buf, packet.getData());
 
 
-
-                        //****************************************
-                        // Extract the IP address (an InetAddress object) and source port (int) from the received packet
-                        // They will be both used to send back the response (which is now in the buf byte array -- see above)
-                        //****************************************
-                        InetAddress addr = packet.getAddress();
-                        int srcPort = packet.getPort();
-
-                        // set the buf as the data of the packet (let's re-use the same packet object)
-                        packet.setData(buf);
-
-                        // set the IP address and port extracted above as destination IP address and port in the packet to be sent
-                        packet.setAddress(addr);
-                        packet.setPort(srcPort);
-
-                        //*****************************************
-                        // Send the packet (a blocking call)
-                        //*****************************************
+                        writeFileName = deserialisePacket.getFileName();
+                        sendFileData = serialisePacket.getAckBuffer(1);
+                        byte[] senderBuffer = new byte[516];
+                        System.arraycopy(sendFileData, 0, senderBuffer, 0, sendFileData.length);
+                        packet.setData(senderBuffer);
+                        packet.setAddress(packet.getAddress());
+                        packet.setPort(packet.getPort());
                         socket.send(packet);
-
-
 
 
                         break;
                     case Data:
 
-                        for(byte bytes: getData(packet.getData())){
-                            recieveBuffer.add(bytes);
-                        }
 
-                        if(packet.getData()[LENGTH - 1] == 0) {
-                            try (FileOutputStream fos = new FileOutputStream(fileName)) {
+                        recieveBuffer.addBytes(deserialisePacket.getData());
+
+
+                        if (packet.getData()[packet.getData().length - 1] == 0) {
+                            try (FileOutputStream fos = new FileOutputStream(writeFileName)) {
 
                                 byte[] fileBytesArray = new byte[recieveBuffer.size()];
-                                for(int i = 0; i < recieveBuffer.size(); i++){
+                                for (int i = 0; i < recieveBuffer.size(); i++) {
                                     fileBytesArray[i] = recieveBuffer.get(i);
                                 }
                                 fos.write(fileBytesArray);
-                                System.out.println("File has been saved to client's directory as " + fileName);
+                                fos.close();
+                                System.out.println("File has been saved to server's directory as " + writeFileName);
                             }
                         }
 
-                        buf = addOpToBuffer(Opcode.Ack.getValue());
+                        byte[] sendBuffer = serialisePacket.getAckBuffer(deserialisePacket.getBlockNumber());
 
-                        buf = addBlockToBuffer(buf, packet.getData());
-
-                        InetAddress addrData = packet.getAddress();
-                        packet = createPacket(buf, addrData);
-
-                        // Send the datagram packet to the server (this is a blocking call) - we do not care about the data that the packet carries.
-                        // The server will respond to any kind of request (i.e. regardless of the packet payload)
+                        senderBuffer = new byte[516];
+                        System.arraycopy(sendBuffer, 0, senderBuffer, 0, sendBuffer.length);
+                        packet.setData(senderBuffer);
+                        packet.setAddress(packet.getAddress());
+                        packet.setPort(packet.getPort());
                         socket.send(packet);
                         break;
                     case Ack:
-                        int block = getBlock(packet.getData()) + 1;
+                        int block = deserialisePacket.getBlockNumber() + 1;
+                        int length = (wholeFile.size() - (block*DATA_LENGTH) < DATA_LENGTH) ? wholeFile.size() - (block * DATA_LENGTH) : (DATA_LENGTH);
 
-                        byte[] send = addOpToBuffer(3);
-                        send = addBlockToBuffer(send, block);
-
-
-
-                        int length = (totalByteArray.length - (block*(LENGTH - 4)) < (LENGTH - 4)) ? totalByteArray.length - (block * (LENGTH - 4)) : (LENGTH - 4);
                         if(length > 0){
-                            System.arraycopy(totalByteArray, block * 508, send, 4, length);
-                            //System.arraycopy(byteArray, fromPos, dest, toPos, length);
 
-                            //****************************************6
-                            // Extract the IP address (an InetAddress object) and source port (int) from the received packet
-                            // They will be both used to send back the response (which is now in the buf byte array -- see above)
-                            //****************************************
-                            addr = packet.getAddress();
-                            srcPort = packet.getPort();
 
-                            // set the buf as the data of the packet (let's re-use the same packet object)
-                            packet.setData(send);
+                            byte[] smallFileData = new byte[512];
 
-                            // set the IP address and port extracted above as destination IP address and port in the packet to be sent
-                            packet.setAddress(addr);
-                            packet.setPort(srcPort);
+                            System.arraycopy(convertToBytes(wholeFile), block * DATA_LENGTH, smallFileData, 0, length);
 
-                            //*****************************************
-                            // Send the packet (a blocking call)
-                            //*****************************************
+                            SerialisePacket serialisePacket2 = new SerialisePacket();
+                            sendFileData = serialisePacket2.getDataBuffer(block, smallFileData);
+
+
+
+
+                            packet.setData(sendFileData);
+                            packet.setAddress(packet.getAddress());
+                            packet.setPort(packet.getPort());
                             socket.send(packet);
+
                         }
                         break;
-                    case Error:
-                        break;
+
                 }
-
-
             }
         } catch (IOException e) {
             System.err.println(e);
         }
         socket.close();
     }
-
 
     public static void main(String[] args) throws IOException {
         new UDPSocketServer().start();

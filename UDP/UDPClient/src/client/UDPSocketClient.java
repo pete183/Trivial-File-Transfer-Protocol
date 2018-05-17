@@ -3,258 +3,242 @@ package client;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.lang.reflect.Array;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Scanner;
 
-public class UDPSocketClient extends GenericUDPSocket {
 
-    private static String fileName;
-    // the client will take the IP Address of the server (in dotted decimal format as an argument)
-    // given that for this tutorial both the client and the server will run on the same machine, you can use the loopback address 127.0.0.1
-    public static void main(String[] args) throws IOException {
+public class UDPSocketClient extends SocketConstants {
+
+    private final int TID;
+    private InetAddress address;
+
+    private enum ClientOption {
+        Read("1"),
+        Write("2"),
+        Error("3");
+
+        private String value;
+
+        ClientOption(final String value) {
+            this.value = value;
+        }
+
+        public String getValue() {
+            return value;
+        }
+
+        public static ClientOption get(String value){
+            for(ClientOption code: ClientOption.values()){
+                if(code.value.equals(value)){
+                    return code;
+                }
+            }
+            return ClientOption.Error;
+        }
 
 
+        @Override
+        public String toString() {
+            return this.getValue();
+        }
+    }
 
-        String option = optionInput();
 
-
+    public UDPSocketClient(String[] args) throws IOException {
+        TID = generateTID();
+        System.out.println(TID);
         DatagramSocket socket;
         DatagramPacket packet;
 
-        ArrayList<Byte> recieveBuffer = new ArrayList<>();
-        byte[] totalByteArray = new byte[LENGTH];
+        String fileName = "";
+        byte[] sendBuffer = new byte[516];
+        ByteArray recieveBuffer = new ByteArray();
+        ByteArray wholeFile = new ByteArray();
+        byte[] sendFileData = new byte[516];
 
+
+        socket = new DatagramSocket(TID);
+        address = InetAddress.getByName(args[0]);
 
         if (args.length != 1) {
             System.out.println("the hostname of the server is required");
             return;
         }
 
-        byte[] buf = new byte[LENGTH];
 
-
-        //****************************************************************************************
-        // add a line below to instantiate the DatagramSocket socket object
-        // bind the socket to some port over 1024
-        // Note: this is NOT the port we set in the server
-        // If you put the same port you will get an exception because
-        // the server is also listening to this port and both processes run on the same machine!
-        //****************************************************************************************
-        socket = new DatagramSocket(4000);
-
-        //socket.setSoTimeout(50);
-
-        // Add source code below to get the address from args[0], the argument handed in when the process is started.
-        // In Netbeans, add a command line argument by changing the running configuration.
-        // The address must be transfomed from a String to an InetAddress (an IP addresse object in Java).
-        InetAddress address = InetAddress.getByName(args[0]);
-
-
-        switch(Integer.parseInt(option)){
-            case 1:
-                buf = createReadBuffer();
-                break;
-            case 2:
-                buf = createWriteBuffer();
-                break;
-            default:
-                System.out.println("Invalid option");
-                break;
-        }
-
-        //************************************************************
-        // Add a line to instantiate a packet using the buf byte array
-        // Set the IP address and port fields in the packet so that the packet is sent to the server
-        //************************************************************
-        packet = createPacket(buf, address);
-
-
-        // Send the datagram packet to the server (this is a blocking call) - we do not care about the data that the packet carries.
-        // The server will respond to any kind of request (i.e. regardless of the packet payload)
-        socket.send(packet);
-
-        //**************************************************************************************
-        // add a line of code below to receive a packet containing the server's response
-        // we can reuse the DatagramPacket instantiated above - all settable values will be overriden when the receive call completes.
-        //**************************************************************************************
-        boolean whileLoop = true;
-        while(whileLoop){
-            socket.receive(packet);
-
-
-            Opcode opOption = Opcode.get(getOpcode(packet.getData()));
-
-            if(packet.getData()[LENGTH - 1] == 0){
-                whileLoop = false;
-            }
-
-            switch(opOption){
+        boolean userInput = true;
+        while(userInput) {
+            String userOption = askUserInputOption();
+            fileName = askUserFileName();
+            SerialisePacket serialisePacket = new SerialisePacket();
+            switch (ClientOption.get(userOption)) {
                 case Read:
+
+                    sendBuffer = serialisePacket.getRequestBuffer(Opcode.Read, fileName);
+                    userInput = false;
                     break;
                 case Write:
+                    sendBuffer = serialisePacket.getRequestBuffer(Opcode.Write, fileName);
+                    userInput = false;
+                    break;
+                default:
+                    System.out.println("Invalid option");
+                    break;
+            }
+
+        }
+        byte[] finalSend = new byte[516];
+        System.arraycopy(sendBuffer, 0, finalSend, 0, sendBuffer.length);
+        packet = createPacket(finalSend, 9000);
+        socket.send(packet);
+
+
+
+        boolean packetLoop = true;
+        while(packetLoop){
+            socket.receive(packet);
+
+            DeserialisePacket deserialisePacket = new DeserialisePacket(packet);
+
+            int opcode = deserialisePacket.getOpcode();
+            SerialisePacket serialisePacket = new SerialisePacket();
+            switch (Opcode.get(opcode)) {
+                case Read:
+                    System.out.println("Read");
+                    break;
+                case Write:
+                    System.out.println("Write");
                     break;
                 case Data:
-                    for(byte bytes: getData(packet.getData())){
-                        recieveBuffer.add(bytes);
+                    if(packet.getData()[packet.getData().length - 1] == 0) {
+                        packetLoop = false;
                     }
 
-                    if(!whileLoop) {
+                    recieveBuffer.addBytes(deserialisePacket.getData());
+
+
+                    if (!packetLoop) {
                         try (FileOutputStream fos = new FileOutputStream(fileName)) {
 
                             byte[] fileBytesArray = new byte[recieveBuffer.size()];
-                            for(int i = 0; i < recieveBuffer.size(); i++){
+                            for (int i = 0; i < recieveBuffer.size(); i++) {
                                 fileBytesArray[i] = recieveBuffer.get(i);
                             }
                             fos.write(fileBytesArray);
+                            fos.close();
                             System.out.println("File has been saved to client's directory as " + fileName);
                         }
                     }
 
-                    buf = addOpToBuffer(Opcode.Ack.getValue());
+                    sendBuffer = serialisePacket.getAckBuffer(deserialisePacket.getBlockNumber()+1);
 
-                    buf = addBlockToBuffer(buf, packet.getData());
 
-                    packet = createPacket(buf, address);
-
-                    // Send the datagram packet to the server (this is a blocking call) - we do not care about the data that the packet carries.
-                    // The server will respond to any kind of request (i.e. regardless of the packet payload)
+                    byte[] senderBuffer = new byte[516];
+                    System.arraycopy(sendBuffer, 0, senderBuffer, 0, sendBuffer.length);
+                    packet.setData(senderBuffer);
+                    packet.setAddress(packet.getAddress());
+                    packet.setPort(packet.getPort());
                     socket.send(packet);
-
                     break;
                 case Ack:
+                    System.out.println("Ack");
 
+                    int blockNumber = deserialisePacket.getBlockNumber();
                     File file = new File("./"+ fileName);
 
-
-
                     if(file.exists()){
-                        System.out.println("Reading file: " + fileName);
-                        // Send data
-                        totalByteArray = Files.readAllBytes(file.toPath());
+                        wholeFile = new ByteArray();
+                        wholeFile.addBytes(Files.readAllBytes(file.toPath()));
+
+                        int fileSendLength = (wholeFile.size() < DATA_LENGTH ) ? wholeFile.size() : (DATA_LENGTH);
+
+                        byte[] dataSend = new byte[fileSendLength];
+                        System.arraycopy(convertToBytes(wholeFile), 0, dataSend, 0, fileSendLength);
 
 
-                        byte[] send = addOpToBuffer(Opcode.Data.getValue());
-                        send = addBlockToBuffer(send);
-
-                        int length = (totalByteArray.length < (LENGTH - 4)) ? totalByteArray.length : (LENGTH - 4);
-
-                        System.arraycopy(totalByteArray, 0, send, 4, length);
-
-
-                        //****************************************
-                        // Extract the IP address (an InetAddress object) and source port (int) from the received packet
-                        // They will be both used to send back the response (which is now in the buf byte array -- see above)
-                        //****************************************
-                        InetAddress addr = packet.getAddress();
-                        int srcPort = packet.getPort();
-
-                        // set the buf as the data of the packet (let's re-use the same packet object)
-                        packet.setData(send);
-
-                        // set the IP address and port extracted above as destination IP address and port in the packet to be sent
-                        packet.setAddress(addr);
-                        packet.setPort(srcPort);
-
-                        //*****************************************
-                        // Send the packet (a blocking call)
-                        //*****************************************
+                        sendFileData = serialisePacket.getDataBuffer(blockNumber+1, dataSend);
+                        System.out.println(new String(sendFileData));
+                        packet.setData(sendFileData);
+                        packet.setAddress(packet.getAddress());
+                        packet.setPort(packet.getPort());
                         socket.send(packet);
+
 
 
 
                     } else {
                         // Send error
-                        System.out.println(fileName + " does not exist");
-                        byte[] errorSend = addOpToBuffer(Opcode.Error.getValue());
-                        errorSend = addErrorToBuffer(errorSend, 40);
-                        errorSend = addErrorMessageToBuffer(errorSend, fileName + " does not exist");
+                        System.out.println(fileName + " doesn't exist");
 
-                        //****************************************
-                        // Add source code below to extract the IP address (an InetAddress object) and source port (int) from the received packet
-                        // They will be both used to send back the response (which is now in the buf byte array -- see above)
-                        //****************************************
-                        InetAddress addr = packet.getAddress();
-                        int srcPort = packet.getPort();
+                        sendFileData = serialisePacket.getErrorBuffer();
 
-                        // set the buf as the data of the packet (let's re-use the same packet object)
-                        packet.setData(errorSend);
 
-                        // set the IP address and port extracted above as destination IP address and port in the packet to be sent
-                        packet.setAddress(addr);
-                        packet.setPort(srcPort);
-
-                        //*****************************************
-                        // Send the packet (a blocking call)
-                        //*****************************************
+                        packet.setData(sendFileData);
+                        packet.setAddress(packet.getAddress());
+                        packet.setPort(packet.getPort());
                         socket.send(packet);
+
 
                     }
 
                     break;
                 case Error:
-                    System.out.println(getErrorMessage(packet.getData()));
-                    whileLoop = false;
+                    System.out.println(deserialisePacket.getErrorMessage() + " - Error Code: " + deserialisePacket.getErrorCode());
+                    packetLoop = false;
                     break;
-
             }
-        }
 
-        // display response
+        }
         socket.close();
     }
 
+    // the client will take the IP Address of the server (in dotted decimal format as an argument)
+    // given that for this tutorial both the client and the server will run on the same machine, you can use the loopback address 127.0.0.1
+    public static void main(String[] args) throws IOException {
+        new UDPSocketClient(args);
+    }
+
+    private DatagramPacket createPacket(byte[] buffer, int port){
+        DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+        packet.setAddress(address);
+        packet.setPort(port);
+        return packet;
+    }
 
 
-
-    public static String optionInput(){
+    private String askUserInputOption(){
         System.out.println("press 1 to retrieve a file from the server, press 2 to store a file on the server");
-
         Scanner scan = new Scanner(System.in);
         return scan.nextLine();
     }
 
-    public static byte[] createReadBuffer(){
-        return createBuffer(Opcode.Read.getValue());
-    }
-
-    public static byte[] createWriteBuffer(){
-        return createBuffer(Opcode.Write.getValue());
-    }
-
-
-    public static byte[] createBuffer(int opcode){
-        byte[] buf = addOpToBuffer(opcode);
-
-
+    private String askUserFileName(){
         System.out.println("Enter the filename");
 
+
         Scanner scanFile = new Scanner(System.in);
-        fileName = scanFile.nextLine();
-
-
-
-        if(fileName.length() > (LENGTH - TFTPMODE.length() - 4)){
-            System.out.println("File name is too long");
-        }
-
-        byte[] bytes = fileName.getBytes();
-
-        System.arraycopy(bytes, 0, buf, 2, fileName.length());
-
-
-        buf[fileName.length()+2] = 0;
-
-        byte[] mode = TFTPMODE.getBytes();
-
-        System.arraycopy(mode, 0, buf, fileName.length() + 3, mode.length);
-
-        return buf;
+        String answer = scanFile.nextLine();
+        return answer;
     }
-    
+
+
+//    public DatagramPacket createInitalDatagram(byte[] buffer){
+//        byte[] sendBuffer = new byte[LENGTH];
+//        System.arraycopy(buffer,0, sendBuffer, 0, buffer.length);
+//        DatagramPacket packet = new DatagramPacket(sendBuffer, sendBuffer.length);
+//        packet.setAddress(address);
+//        packet.setPort(9000);
+//        return packet;
+//    }
+
+
+
+
+
+
+
+
 }
