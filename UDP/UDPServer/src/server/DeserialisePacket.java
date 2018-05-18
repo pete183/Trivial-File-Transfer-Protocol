@@ -73,7 +73,7 @@ public class DeserialisePacket extends SocketConstants {
     public byte[] getData(){
         int i = 4;
         ArrayList<Byte> buffer = new ArrayList<>();
-        while(i < packet.getData().length && packet.getData()[i] != 0){
+        while(i < packet.getData().length){
             buffer.add(packet.getData()[i]);
             i++;
         }

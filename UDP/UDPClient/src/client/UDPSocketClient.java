@@ -16,10 +16,8 @@ import java.util.Scanner;
 public class UDPSocketClient extends SocketConstants {
 
     /**
-     * Private TID integer
      * Private address
      */
-    private final int TID;
     private InetAddress address;
 
 
@@ -32,8 +30,6 @@ public class UDPSocketClient extends SocketConstants {
     public UDPSocketClient(String[] args) throws IOException {
 
 
-        TID = generateTID();
-
         DatagramSocket socket;
         DatagramPacket packet;
 
@@ -44,8 +40,9 @@ public class UDPSocketClient extends SocketConstants {
         byte[] sendFileData = new byte[PACKET_LENGTH];
 
 
-        socket = new DatagramSocket(TID);
-        socket.setSoTimeout(TIME_OUT);
+        socket = new DatagramSocket(generateTID());
+        //TODO uncomment
+        //socket.setSoTimeout(TIME_OUT);
         address = InetAddress.getByName(args[0]);
 
         if (args.length != 1) {
@@ -57,17 +54,23 @@ public class UDPSocketClient extends SocketConstants {
         boolean userInput = true;
         while(userInput) {
             String userOption = askUserInputOption();
-            fileName = askUserFileName();
             SerialisePacket serialisePacket = new SerialisePacket();
             switch (ClientOption.get(userOption)) {
                 case Read:
-
+                    fileName = askUserFileName();
                     sendBuffer = serialisePacket.getRequestBuffer(Opcode.Read, fileName);
                     userInput = false;
                     break;
                 case Write:
-                    sendBuffer = serialisePacket.getRequestBuffer(Opcode.Write, fileName);
-                    userInput = false;
+                    fileName = askUserFileName();
+                    if(new File(fileName).exists()){
+                        sendBuffer = serialisePacket.getRequestBuffer(Opcode.Write, fileName);
+                        userInput = false;
+                    } else {
+                        System.out.println(fileName + " does not exists");
+                        System.out.println("Please start again.");
+                    }
+
                     break;
                 default:
                     System.out.println("Invalid option");
@@ -98,7 +101,7 @@ public class UDPSocketClient extends SocketConstants {
                     System.out.println("Write");
                     break;
                 case Data:
-                    if(packet.getData()[packet.getData().length - 1] == 0) {
+                    if(packet.getLength() < PACKET_LENGTH){
                         packetLoop = false;
                     }
                     recieveBuffer.addBytes(deserialisePacket.getData());
@@ -135,12 +138,13 @@ public class UDPSocketClient extends SocketConstants {
                         wholeFile = new ByteArray();
                         wholeFile.addBytes(Files.readAllBytes(file.toPath()));
 
+
                         int length = (wholeFile.size() - ((blockNumber) * DATA_LENGTH) < DATA_LENGTH) ? wholeFile.size() - ((blockNumber) * DATA_LENGTH) : (DATA_LENGTH);
                         if(length < 512){
                             packetLoop = false;
                             System.out.println("File has been saved to server's directory as " + fileName);
                         }
-                        byte[] dataSend = new byte[DATA_LENGTH];
+                        byte[] dataSend = new byte[length];
                         System.arraycopy(convertToBytes(wholeFile), (blockNumber) * DATA_LENGTH, dataSend, 0, length);
 
 

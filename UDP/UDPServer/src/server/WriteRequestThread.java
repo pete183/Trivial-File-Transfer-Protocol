@@ -52,7 +52,7 @@ public class WriteRequestThread extends RequestThread {
                     case Data:
                         wholeFile.addBytes(deserialisePacket.getData());
 
-                        if (packet.getData()[packet.getData().length - 1] == 0) {
+                        if (packet.getLength() - 4 < DATA_LENGTH) {
                             try (FileOutputStream fos = new FileOutputStream(writeFileName)) {
 
                                 byte[] fileBytesArray = new byte[wholeFile.size()];
@@ -72,6 +72,8 @@ public class WriteRequestThread extends RequestThread {
                             System.arraycopy(sendBuffer, 0, senderBuffer, 0, sendBuffer.length);
                             socket.send(setPacket(senderBuffer, packet));
                         }
+                        break;
+                    default:
                         break;
                 }
             }

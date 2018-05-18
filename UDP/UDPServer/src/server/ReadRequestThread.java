@@ -62,6 +62,7 @@ public class ReadRequestThread extends RequestThread {
 
                 byte[] sendFileData = serialisePacket.getErrorBuffer();
                 socket.send(setPacket(sendFileData, packet));
+                live = false;
 
             }
 
@@ -80,11 +81,13 @@ public class ReadRequestThread extends RequestThread {
 
                             socket.send(setPacket(sendFileData, packet));
 
-
                         } else {
                             live = false;
+                            byte[] sendFileData = serialisePacket.getDataBuffer(block+1, new byte[0]);
+                            socket.send(setPacket(sendFileData, packet));
                         }
                         break;
+
                 }
             }
         } catch (IOException e) {
