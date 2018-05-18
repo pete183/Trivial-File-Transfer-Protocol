@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 
@@ -55,20 +56,27 @@ public class ReadRequestThread extends RequestThread {
 
 
                 byte[] sendFileData = serialisePacket.getDataBuffer(1, dataSend);
-                socket.send(setPacket(sendFileData, packet));
+                sentPacket = setPacket(sendFileData, packet);
+                socket.send(sentPacket);
 
             } else {
                 System.out.println(readFileName + " doesn't exist");
 
                 byte[] sendFileData = serialisePacket.getErrorBuffer();
-                socket.send(setPacket(sendFileData, packet));
+                sentPacket = setPacket(sendFileData, packet);
+                socket.send(sentPacket);
                 live = false;
 
             }
 
 
             while (live) {
-                socket.receive(packet);
+                try {
+                    socket.receive(packet);
+                } catch(SocketTimeoutException e){
+                    socket.send(sentPacket);
+                }
+
                 switch(Opcode.get(deserialisePacket.getOpcode())){
                     case Ack:
                         int block = deserialisePacket.getBlockNumber();
@@ -78,13 +86,14 @@ public class ReadRequestThread extends RequestThread {
 
                             System.arraycopy(convertToBytes(wholeFile), block * DATA_LENGTH, smallFileData, 0, length);
                             byte[] sendFileData = serialisePacket.getDataBuffer(block+1, smallFileData);
-
-                            socket.send(setPacket(sendFileData, packet));
+                            sentPacket = setPacket(sendFileData, packet);
+                            socket.send(sentPacket);
 
                         } else {
                             live = false;
                             byte[] sendFileData = serialisePacket.getDataBuffer(block+1, new byte[0]);
-                            socket.send(setPacket(sendFileData, packet));
+                            sentPacket = setPacket(sendFileData, packet);
+                            socket.send(sentPacket);
                         }
                         break;
 

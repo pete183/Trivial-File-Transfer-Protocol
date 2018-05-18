@@ -4,6 +4,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 
 /**
  * ReadRequestThread
@@ -21,7 +22,6 @@ public class WriteRequestThread extends RequestThread {
      */
     public WriteRequestThread(String name, int tid, DatagramPacket packet) throws SocketException {
         super(name, tid, packet);
-
     }
 
     /**
@@ -42,11 +42,16 @@ public class WriteRequestThread extends RequestThread {
             byte[] sendFileData = serialisePacket.getAckBuffer(0);
             byte[] senderBuffer = new byte[PACKET_LENGTH];
             System.arraycopy(sendFileData, 0, senderBuffer, 0, sendFileData.length);
-            socket.send(setPacket(senderBuffer, packet));
+            sentPacket = setPacket(senderBuffer, packet);
+            socket.send(sentPacket);
 
 
             while (live) {
-                socket.receive(packet);
+                try {
+                    socket.receive(packet);
+                } catch(SocketTimeoutException e){
+                    socket.send(sentPacket);
+                }
 
                 switch(Opcode.get(deserialisePacket.getOpcode())){
                     case Data:
@@ -70,7 +75,8 @@ public class WriteRequestThread extends RequestThread {
 
                             senderBuffer = new byte[PACKET_LENGTH];
                             System.arraycopy(sendBuffer, 0, senderBuffer, 0, sendBuffer.length);
-                            socket.send(setPacket(senderBuffer, packet));
+                            sentPacket = setPacket(senderBuffer, packet);
+                            socket.send(sentPacket);
                         }
                         break;
                     default:

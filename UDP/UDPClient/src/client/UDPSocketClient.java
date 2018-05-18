@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.SocketTimeoutException;
 import java.nio.file.Files;
 import java.util.Scanner;
 
@@ -38,6 +39,7 @@ public class UDPSocketClient extends SocketConstants {
         ByteArray recieveBuffer = new ByteArray();
         ByteArray wholeFile = new ByteArray();
         byte[] sendFileData = new byte[PACKET_LENGTH];
+        DatagramPacket sentPacket;
 
 
         socket = new DatagramSocket(generateTID());
@@ -81,13 +83,18 @@ public class UDPSocketClient extends SocketConstants {
         byte[] finalSend = new byte[PACKET_LENGTH];
         System.arraycopy(sendBuffer, 0, finalSend, 0, sendBuffer.length);
         packet = createPacket(finalSend, 9000);
+        sentPacket = packet;
         socket.send(packet);
 
 
 
         boolean packetLoop = true;
         while(packetLoop){
-            socket.receive(packet);
+            try {
+                socket.receive(packet);
+            } catch(SocketTimeoutException e){
+                socket.send(sentPacket);
+            }
 
             DeserialisePacket deserialisePacket = new DeserialisePacket(packet);
 
@@ -126,6 +133,7 @@ public class UDPSocketClient extends SocketConstants {
                     packet.setData(senderBuffer);
                     packet.setAddress(packet.getAddress());
                     packet.setPort(packet.getPort());
+                    sentPacket = packet;
                     socket.send(packet);
                     break;
                 case Ack:
@@ -152,6 +160,7 @@ public class UDPSocketClient extends SocketConstants {
                         packet.setData(sendFileData);
                         packet.setAddress(packet.getAddress());
                         packet.setPort(packet.getPort());
+                        sentPacket = packet;
                         socket.send(packet);
                     }
                     break;

@@ -17,6 +17,7 @@ public abstract class RequestThread extends SocketConstants{
      */
     protected DatagramSocket socket = null;
     protected DatagramPacket packet = null;
+    protected DatagramPacket sentPacket;
 
 
 
@@ -33,7 +34,7 @@ public abstract class RequestThread extends SocketConstants{
         super(name + String.valueOf(tid));
         socket = new DatagramSocket(tid);
        //TODO uncomment
-        // socket.setSoTimeout(TIME_OUT);
+        socket.setSoTimeout(TIME_OUT);
         this.packet = packet;
     }
 
