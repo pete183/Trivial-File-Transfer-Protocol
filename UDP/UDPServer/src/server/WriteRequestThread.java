@@ -39,7 +39,7 @@ public class WriteRequestThread extends RequestThread {
             SerialisePacket serialisePacket = new SerialisePacket();
 
             writeFileName = deserialisePacket.getFileName();
-            byte[] sendFileData = serialisePacket.getAckBuffer(1);
+            byte[] sendFileData = serialisePacket.getAckBuffer(0);
             byte[] senderBuffer = new byte[PACKET_LENGTH];
             System.arraycopy(sendFileData, 0, senderBuffer, 0, sendFileData.length);
             socket.send(setPacket(senderBuffer, packet));

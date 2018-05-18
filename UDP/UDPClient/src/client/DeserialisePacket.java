@@ -4,10 +4,22 @@ import java.math.BigInteger;
 import java.net.DatagramPacket;
 import java.util.ArrayList;
 
+/**
+ * DeserialisePacket
+ * Extends SocketConstants
+ */
 public class DeserialisePacket extends SocketConstants {
 
+    /**
+     * private DatagramPacket
+     */
     private DatagramPacket packet;
 
+    /**
+     * DeserialisePacket
+     * Constructor
+     * @param packet
+     */
     public DeserialisePacket(DatagramPacket packet){
         this.packet = packet;
     }
@@ -101,9 +113,4 @@ public class DeserialisePacket extends SocketConstants {
         return new String(convertToBytes(buffer));
 
     }
-
-
-
-
-
 }

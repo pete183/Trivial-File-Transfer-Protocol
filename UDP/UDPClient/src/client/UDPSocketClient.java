@@ -9,18 +9,28 @@ import java.net.InetAddress;
 import java.nio.file.Files;
 import java.util.Scanner;
 
-
+/**
+ * UDPSocketClient
+ * Extends SocketConstants
+ */
 public class UDPSocketClient extends SocketConstants {
 
+    /**
+     * Private TID integer
+     * Private address
+     */
     private final int TID;
     private InetAddress address;
 
 
-
-
+    /**
+     * UDPSocketClient
+     * Constructor
+     * @param args
+     * @throws IOException
+     */
     public UDPSocketClient(String[] args) throws IOException {
 
-        //TODO Add timeout for all sockets
 
         TID = generateTID();
 
@@ -28,14 +38,14 @@ public class UDPSocketClient extends SocketConstants {
         DatagramPacket packet;
 
         String fileName = "";
-        byte[] sendBuffer = new byte[516];
+        byte[] sendBuffer = new byte[PACKET_LENGTH];
         ByteArray recieveBuffer = new ByteArray();
         ByteArray wholeFile = new ByteArray();
-        byte[] sendFileData = new byte[516];
+        byte[] sendFileData = new byte[PACKET_LENGTH];
 
 
         socket = new DatagramSocket(TID);
-        socket.setSoTimeout(5000);
+        socket.setSoTimeout(TIME_OUT);
         address = InetAddress.getByName(args[0]);
 
         if (args.length != 1) {
@@ -65,7 +75,7 @@ public class UDPSocketClient extends SocketConstants {
             }
 
         }
-        byte[] finalSend = new byte[516];
+        byte[] finalSend = new byte[PACKET_LENGTH];
         System.arraycopy(sendBuffer, 0, finalSend, 0, sendBuffer.length);
         packet = createPacket(finalSend, 9000);
         socket.send(packet);
@@ -91,10 +101,7 @@ public class UDPSocketClient extends SocketConstants {
                     if(packet.getData()[packet.getData().length - 1] == 0) {
                         packetLoop = false;
                     }
-
                     recieveBuffer.addBytes(deserialisePacket.getData());
-
-
                     if (!packetLoop) {
                         try (FileOutputStream fos = new FileOutputStream(fileName)) {
 
@@ -108,10 +115,10 @@ public class UDPSocketClient extends SocketConstants {
                         }
                     }
 
-                    sendBuffer = serialisePacket.getAckBuffer(deserialisePacket.getBlockNumber()+1);
+                    sendBuffer = serialisePacket.getAckBuffer(deserialisePacket.getBlockNumber());
 
 
-                    byte[] senderBuffer = new byte[516];
+                    byte[] senderBuffer = new byte[PACKET_LENGTH];
                     System.arraycopy(sendBuffer, 0, senderBuffer, 0, sendBuffer.length);
                     packet.setData(senderBuffer);
                     packet.setAddress(packet.getAddress());
@@ -128,13 +135,13 @@ public class UDPSocketClient extends SocketConstants {
                         wholeFile = new ByteArray();
                         wholeFile.addBytes(Files.readAllBytes(file.toPath()));
 
-                        int length = (wholeFile.size() - ((blockNumber - 1) * DATA_LENGTH) < DATA_LENGTH) ? wholeFile.size() - ((blockNumber - 1) * DATA_LENGTH) : (DATA_LENGTH);
+                        int length = (wholeFile.size() - ((blockNumber) * DATA_LENGTH) < DATA_LENGTH) ? wholeFile.size() - ((blockNumber) * DATA_LENGTH) : (DATA_LENGTH);
                         if(length < 512){
                             packetLoop = false;
                             System.out.println("File has been saved to server's directory as " + fileName);
                         }
                         byte[] dataSend = new byte[DATA_LENGTH];
-                        System.arraycopy(convertToBytes(wholeFile), (blockNumber - 1) * DATA_LENGTH, dataSend, 0, length);
+                        System.arraycopy(convertToBytes(wholeFile), (blockNumber) * DATA_LENGTH, dataSend, 0, length);
 
 
                         sendFileData = serialisePacket.getDataBuffer(blockNumber + 1, dataSend);
@@ -143,23 +150,6 @@ public class UDPSocketClient extends SocketConstants {
                         packet.setPort(packet.getPort());
                         socket.send(packet);
                     }
-
-//                    } else {
-//                        // Send error
-//                        System.out.println(fileName + " doesn't exist");
-//
-//                        sendFileData = serialisePacket.getErrorBuffer();
-//
-//
-//                        packet.setData(sendFileData);
-//                        packet.setAddress(packet.getAddress());
-//                        packet.setPort(packet.getPort());
-//                        socket.send(packet);
-//                        socket.close();
-//
-//
-//                    }
-
                     break;
                 case Error:
                     System.out.println(deserialisePacket.getErrorMessage() + " - Error Code: " + deserialisePacket.getErrorCode());
@@ -171,12 +161,21 @@ public class UDPSocketClient extends SocketConstants {
         socket.close();
     }
 
-    // the client will take the IP Address of the server (in dotted decimal format as an argument)
-    // given that for this tutorial both the client and the server will run on the same machine, you can use the loopback address 127.0.0.1
+    /**
+     * main
+     * @param args e.g. 127.0.0.1
+     * @throws IOException
+     */
     public static void main(String[] args) throws IOException {
         new UDPSocketClient(args);
     }
 
+    /**
+     * createPacket
+     * @param buffer
+     * @param port
+     * @return DatagramPacket
+     */
     private DatagramPacket createPacket(byte[] buffer, int port){
         DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
         packet.setAddress(address);
@@ -184,37 +183,24 @@ public class UDPSocketClient extends SocketConstants {
         return packet;
     }
 
-
+    /**
+     * askUserInputOption
+     * @return String user's option
+     */
     private String askUserInputOption(){
         System.out.println("press 1 to retrieve a file from the server, press 2 to store a file on the server");
         Scanner scan = new Scanner(System.in);
         return scan.nextLine();
     }
 
+    /**
+     * askUserFileName
+     * @return String filename
+     */
     private String askUserFileName(){
         System.out.println("Enter the filename");
-
-
         Scanner scanFile = new Scanner(System.in);
         String answer = scanFile.nextLine();
         return answer;
     }
-
-
-//    public DatagramPacket createInitalDatagram(byte[] buffer){
-//        byte[] sendBuffer = new byte[LENGTH];
-//        System.arraycopy(buffer,0, sendBuffer, 0, buffer.length);
-//        DatagramPacket packet = new DatagramPacket(sendBuffer, sendBuffer.length);
-//        packet.setAddress(address);
-//        packet.setPort(9000);
-//        return packet;
-//    }
-
-
-
-
-
-
-
-
 }

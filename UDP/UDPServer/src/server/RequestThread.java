@@ -19,9 +19,11 @@ public abstract class RequestThread extends SocketConstants{
     protected DatagramPacket packet = null;
 
 
+
     /**
      * RequestThread
      * Abstract Constructor
+     * Initialised new datagram socket with TID and set timeout
      * @param name
      * @param tid
      * @param packet
@@ -30,6 +32,7 @@ public abstract class RequestThread extends SocketConstants{
     protected RequestThread(String name, int tid, DatagramPacket packet) throws SocketException {
         super(name + String.valueOf(tid));
         socket = new DatagramSocket(tid);
+        socket.setSoTimeout(TIME_OUT);
         this.packet = packet;
     }
 

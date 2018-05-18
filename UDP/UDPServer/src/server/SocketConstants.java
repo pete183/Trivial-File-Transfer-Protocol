@@ -13,10 +13,12 @@ public class SocketConstants extends Thread{
      * Protected final Mode set to "octet"
      * Protected final data length set to 512
      * Protected final packet length set to 516 e.g. 512 + 4
+     * Protected timeout is set to 5 seconds
      */
     protected final String MODE = "octet";
     protected final int DATA_LENGTH = 512;
     protected final int PACKET_LENGTH = 516;
+    protected final int TIME_OUT = 5000;
 
 
     /**

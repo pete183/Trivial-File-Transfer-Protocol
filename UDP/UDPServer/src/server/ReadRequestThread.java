@@ -54,7 +54,7 @@ public class ReadRequestThread extends RequestThread {
                 System.arraycopy(convertToBytes(wholeFile), 0, dataSend, 0, fileSendLength);
 
 
-                byte[] sendFileData = serialisePacket.getDataBuffer(0, dataSend);
+                byte[] sendFileData = serialisePacket.getDataBuffer(1, dataSend);
                 socket.send(setPacket(sendFileData, packet));
 
             } else {
@@ -76,7 +76,7 @@ public class ReadRequestThread extends RequestThread {
                             byte[] smallFileData = new byte[DATA_LENGTH];
 
                             System.arraycopy(convertToBytes(wholeFile), block * DATA_LENGTH, smallFileData, 0, length);
-                            byte[] sendFileData = serialisePacket.getDataBuffer(block, smallFileData);
+                            byte[] sendFileData = serialisePacket.getDataBuffer(block+1, smallFileData);
 
                             socket.send(setPacket(sendFileData, packet));
 

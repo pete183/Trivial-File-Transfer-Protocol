@@ -1,5 +1,8 @@
 package client;
 
+/**
+ * ClientOption
+ */
 public enum ClientOption {
     Read("1"),
     Write("2"),
