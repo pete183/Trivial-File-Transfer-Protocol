@@ -3,9 +3,14 @@ package mttcpserver;
 import java.net.*;
 import java.io.*;
 
-public class MTTCPServer {
+public class MTTCPServer extends SocketConstants {
 
     public static void main(String[] args) throws IOException {
+        new MTTCPServer().execute();
+
+    }
+
+    public void execute() throws IOException{
 
         // the port number that the server socket will be bound to
         int portNumber = 10000;
@@ -14,36 +19,36 @@ public class MTTCPServer {
         ServerSocket masterSocket;
         Socket slaveSocket;
 
-        // *******************************************************************************************
-        // TODO:
-        // Instantiate the server socket, binding it to the port defined above
-        // The easiest way of doing that is to pass the portNumber in the constructor (check the Javadoc links)
-        // Otherwise you need to instantiate the serverSocket object without a port and then bind it manually to a SocketAddress
-        // *******************************************************************************************
         masterSocket = new ServerSocket(portNumber);
-        
+
 
         System.out.println("Server Started...");
-        
-        // the following will run forever (until interrupted by stopping the application through Netbeans)
-        while (true) {
-            // *******************************************************************************************
-            // TODO: 
-            // Add source code below below to accept socket connections. This will be a bloking call; i.e. the process will be blocked until a TCP connection is attempted from a remote host
-            // The method should return a Socket object, named slaveSocket.
-            // the slaveSocket object will be then passed to a new thread that will handle the connection
-            // *******************************************************************************************
+
+        while(true){
+
             slaveSocket = masterSocket.accept();
-            
+
             System.out.println("Accepted TCP connection from: " + slaveSocket.getInetAddress() + ", " + slaveSocket.getPort() + "...");
             System.out.println("Instantiating and starting new MTTCPServerThread object to handle the connection...");
-            
-            // *******************************************************************************************
-            // TODO:
-            // instantiate and start a new MTTCPServerThread object with the client socket as an argument
-            // check the constructor in the MTTCPServerThread class which extends Thread
-            // *******************************************************************************************
-            new MTTCPServerThread(slaveSocket).start();
+
+            byte[] recvBuf = new byte[PACKET_LENGTH];
+
+            InputStream stream = slaveSocket.getInputStream();
+            byte[] recievedBuffer = new byte[516];
+            int count = stream.read(recievedBuffer);
+
+            DeserialisePacket deserialisePacket = new DeserialisePacket(recievedBuffer);
+            int opcode = deserialisePacket.getOpcode();
+
+
+            switch(Opcode.get(opcode)){
+                case Read:
+                    new ReadRequestThread(slaveSocket, recievedBuffer).run();
+                    break;
+                case Write:
+                    new WriteRequestThread(slaveSocket, recievedBuffer).run();
+                    break;
+            }
         }
     }
 }

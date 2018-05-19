@@ -40,6 +40,7 @@ public class MTTCPServerThread extends Thread {
             // Assign the read characters (the whole line) to the inputLine String object declared above.
             // *******************************************************************************************
             while ((line = socketInput.readLine()) != null) {
+
                 System.out.println("Echoing: " + line + ", which is " + line.length() +  " characters long..");
 
                 // *******************************************************************************************
