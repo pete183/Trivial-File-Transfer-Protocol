@@ -26,7 +26,16 @@ public class WriteRequestThread extends RequestThread {
 
     /**
      * run
-     * Runs overridden thread method
+     *
+     * This method is called when we start a Thread object
+     * Note that the WriteRequestThread extends the RequestThread object
+     *
+     * Receives file packets of max 512 bytes
+     * Sends an ack back to client
+     *
+     * On the last packet sent, the file is saved
+     *
+     * Close socket once the connection is finished
      */
     @Override
     public void run() {
@@ -35,10 +44,15 @@ public class WriteRequestThread extends RequestThread {
         String writeFileName;
 
         try {
+
+            // Deserialises packet
             DeserialisePacket deserialisePacket = new DeserialisePacket(packet);
             SerialisePacket serialisePacket = new SerialisePacket();
 
+            // Gets the initial read request filename
             writeFileName = deserialisePacket.getFileName();
+
+            // Sends an ack packet back to client
             byte[] sendFileData = serialisePacket.getAckBuffer(0);
             byte[] senderBuffer = new byte[PACKET_LENGTH];
             System.arraycopy(sendFileData, 0, senderBuffer, 0, sendFileData.length);
@@ -47,16 +61,24 @@ public class WriteRequestThread extends RequestThread {
 
 
             while (live) {
+
+
+                // Catches timeout and re-sends last packet
                 try {
                     socket.receive(packet);
                 } catch(SocketTimeoutException e){
                     socket.send(sentPacket);
                 }
 
+                // Opcode switch statement
                 switch(Opcode.get(deserialisePacket.getOpcode())){
                     case Data:
+
+                        // Adds the whole file to a ByteArray
                         wholeFile.addBytes(deserialisePacket.getData());
 
+                        // If its the last packet
+                        // Save file to server
                         if (packet.getLength() - 4 < DATA_LENGTH) {
                             try (FileOutputStream fos = new FileOutputStream(writeFileName)) {
 
@@ -71,6 +93,9 @@ public class WriteRequestThread extends RequestThread {
                             }
                             live = false;
                         } else {
+
+                            // Create an ack
+                            // Send the ack buffer within packet
                             byte[] sendBuffer = serialisePacket.getAckBuffer(deserialisePacket.getBlockNumber());
 
                             senderBuffer = new byte[PACKET_LENGTH];
@@ -86,6 +111,8 @@ public class WriteRequestThread extends RequestThread {
         } catch (IOException e) {
             System.err.println(e);
         }
+
+        // Closes socket connection
         socket.close();
 
     }

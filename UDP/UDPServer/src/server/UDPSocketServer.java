@@ -47,6 +47,7 @@ public class UDPSocketServer extends SocketConstants {
 
             int tid = generateTID(packet.getPort());
 
+            // Creates a thread based off if it's a read or write request
             switch(Opcode.get(opcode)){
                 case Read:
                     new ReadRequestThread("ReadThread", tid, packet).run();

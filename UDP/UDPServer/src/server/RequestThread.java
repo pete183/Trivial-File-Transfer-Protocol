@@ -33,7 +33,7 @@ public abstract class RequestThread extends SocketConstants{
     protected RequestThread(String name, int tid, DatagramPacket packet) throws SocketException {
         super(name + String.valueOf(tid));
         socket = new DatagramSocket(tid);
-       //TODO uncomment
+        // Sets a timeout to the socket
         socket.setSoTimeout(TIME_OUT);
         this.packet = packet;
     }

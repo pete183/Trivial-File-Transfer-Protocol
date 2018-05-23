@@ -47,16 +47,34 @@ public class SocketConstants extends Thread{
         Ack(4),
         Error(5);
 
+        /**
+         * private opcode value
+         */
         private int value;
 
+        /**
+         * Opcode constructor
+         * @param value
+         */
         Opcode(final int value) {
             this.value = value;
         }
 
+        /**
+         * Gets the opcode value related
+         * @return value
+         */
         public int getValue() {
             return value;
         }
 
+        /**
+         * get
+         * Returns the Opcode related to the value
+         * If the value doesn't exist the error option returns
+         * @param value
+         * @return Opcode Type
+         */
         public static Opcode get(int value){
             Opcode option = Opcode.Error;
             for(Opcode code: Opcode.values()){

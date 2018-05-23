@@ -25,6 +25,7 @@ public class DeserialisePacket extends SocketConstants {
 
     /**
      * getOpcode
+     * Gets the first two values (type int) of the byte[] buffer
      * @return Opcode
      */
     public int getOpcode(){
@@ -35,6 +36,7 @@ public class DeserialisePacket extends SocketConstants {
 
     /**
      * getBlockNumber
+     * Gets the block values (type int) of the byte[] buffer
      * @return Block Number
      */
     public int getBlockNumber(){
@@ -45,6 +47,7 @@ public class DeserialisePacket extends SocketConstants {
 
     /**
      * getErrorCode
+     * Gets the error values (type int) of the byte[] buffer
      * @return Error Code
      */
     public int getErrorCode(){
@@ -67,6 +70,9 @@ public class DeserialisePacket extends SocketConstants {
 
     /**
      * getData
+     * Loops through the packet data with an offset of 4
+     * Adds the bytes to an ArrayList
+     * Returns a primitive byte array
      * @return byte[]
      */
     public byte[] getData(){

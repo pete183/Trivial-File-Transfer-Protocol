@@ -1,69 +1,88 @@
 package mttcpserver;
 
-import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.Socket;
-import java.nio.file.Files;
 
+/**
+ * WriteRequestThread
+ * Extends RequestThread
+ */
 public class WriteRequestThread extends RequestThread {
 
-    byte[] intitalBuffer;
 
-    public WriteRequestThread(Socket socket, byte[] recievedBuffer){
+    /**
+     * private initial buffer byte[]
+     */
+    private byte[] initialBuffer;
+
+    /**
+     * WriteRequestThread
+     * Constructor
+     *
+     * @param socket
+     * @param receivedBuffer
+     */
+    public WriteRequestThread(Socket socket, byte[] receivedBuffer){
         super(socket);
-        this.intitalBuffer = recievedBuffer;
+        this.initialBuffer = receivedBuffer;
     }
 
-
+    /**
+     * run
+     *
+     * This method is called when we start a Thread object
+     * Note that the WriteRequestThread extends the RequestThread object
+     *
+     * Receives file packets of max 512 bytes
+     * On the last packet sent, the file is saved
+     *
+     * Close socket once the connection is finished
+     */
     @Override
-    // This method is called when we start a Thread object
-    // Note that the MTTCPServerThread extends the Thread object
     public void run() {
-        // The line that will be echoed back to the client.
         try {
-            byte[] recievedBuffer = intitalBuffer;
 
-            DeserialisePacket deserialisePacket = new DeserialisePacket(recievedBuffer);
-            SerialisePacket serialisePacket = new SerialisePacket();
+            // Received buffer from the initial connection
+            byte[] receivedBuffer = initialBuffer;
+
+            DeserialisePacket deserialisePacket = new DeserialisePacket(receivedBuffer);
             String fileName = deserialisePacket.getFileName();
-            ByteArray recieveBuffer = new ByteArray();
+            ByteArray receiveBuffer = new ByteArray();
 
+            boolean packetLoop = true;
 
+            // Loop through the received files and add the data to a byte array
+            do{
+                InputStream stream = slaveSocket.getInputStream();
+                byte[] bigBuffer = new byte[516];
+                int count = stream.read(bigBuffer);
+                receivedBuffer = new byte[count];
+                System.arraycopy(bigBuffer, 0, receivedBuffer, 0, count);
+                deserialisePacket = new DeserialisePacket(receivedBuffer);
 
+                if (count < PACKET_LENGTH) {
+                    packetLoop = false;
+                }
+                receiveBuffer.addBytes(deserialisePacket.getData());
+                if (!packetLoop) {
+                    // Save the bytes to a file
+                    try (FileOutputStream fos = new FileOutputStream(fileName)) {
 
-
-                boolean packetLoop = true;
-
-                do{
-                    InputStream stream = slaveSocket.getInputStream();
-                    byte[] bigBuffer = new byte[516];
-                    int count = stream.read(bigBuffer);
-                    recievedBuffer = new byte[count];
-                    System.arraycopy(bigBuffer, 0, recievedBuffer, 0, count);
-                    deserialisePacket = new DeserialisePacket(recievedBuffer);
-
-                    if (count < PACKET_LENGTH) {
-                        packetLoop = false;
-                    }
-                    recieveBuffer.addBytes(deserialisePacket.getData());
-                    if (!packetLoop) {
-                        try (FileOutputStream fos = new FileOutputStream(fileName)) {
-
-                            byte[] fileBytesArray = new byte[recieveBuffer.size()];
-                            for (int i = 0; i < recieveBuffer.size(); i++) {
-                                fileBytesArray[i] = recieveBuffer.get(i);
-                            }
-                            fos.write(fileBytesArray);
-                            fos.close();
-                            System.out.println("File has been saved to client's directory as " + fileName);
+                        byte[] fileBytesArray = new byte[receiveBuffer.size()];
+                        for (int i = 0; i < receiveBuffer.size(); i++) {
+                            fileBytesArray[i] = receiveBuffer.get(i);
                         }
+                        fos.write(fileBytesArray);
+                        fos.close();
+                        System.out.println("File has been saved to client's directory as " + fileName);
                     }
-                }while(packetLoop);
+                }
+            }while(packetLoop);
 
 
-
+            // Closes the slave socket connection
             slaveSocket.close();
             System.out.println("Slave socket has closed");
         } catch (IOException e) {

@@ -11,7 +11,8 @@ public class ByteArray extends ArrayList<Byte> {
 
     /**
      * addInt
-     * Add integer to buffer
+     * Converts integer to byte[]
+     * Adds byte[] to ArrayList
      * @param number
      */
     protected void addInt(int number){
@@ -23,7 +24,8 @@ public class ByteArray extends ArrayList<Byte> {
 
     /**
      * addString
-     * Add string to buffer
+     * Converts string to byte[]
+     * Adds byte[] to ArrayList
      * @param string
      */
     protected void addString(String string){
@@ -42,7 +44,8 @@ public class ByteArray extends ArrayList<Byte> {
 
     /**
      * addBytes
-     * Add primitive byte array to buffer
+     * Loops through byte[]
+     * Adds each byte to ArrayList
      * @param array
      */
     protected void addBytes(byte[] array){

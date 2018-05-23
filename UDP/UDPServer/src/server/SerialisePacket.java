@@ -8,6 +8,11 @@ public class SerialisePacket extends SocketConstants {
 
     /**
      * getRequestBuffer
+     * Adds an opcode
+     * Adds a filename
+     * Adds a Zero
+     * Adds a mode e.g. "octet"
+     * Adds a Zero
      * @param opcode
      * @param fileName
      * @return byte[]
@@ -24,6 +29,9 @@ public class SerialisePacket extends SocketConstants {
 
     /**
      * getDataBuffer
+     * Adds an opcode
+     * Adds a block number
+     * Adds the data
      * @param blockNumber
      * @param data
      * @return byte[]
@@ -38,6 +46,8 @@ public class SerialisePacket extends SocketConstants {
 
     /**
      * getAckBuffer
+     * Adds an opcode
+     * Adds a block number
      * @param blockNumber
      * @return byte[]
      */
@@ -51,6 +61,10 @@ public class SerialisePacket extends SocketConstants {
 
     /**
      * getErrorBuffer
+     * Adds an opcode
+     * Adds an error code e.g. 1
+     * Adds an error message e.g. File not found
+     * Adds a Zero
      * @return byte[]
      */
     public byte[] getErrorBuffer() {
